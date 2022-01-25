@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>HPC with Julia</title>
+    <meta charset="utf-8">
+    <meta name="author" content="Center for Advanced Research Computing at University of Southern California" />
+    <link rel="stylesheet" href="main.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+class: left, top, title-slide
+
+# HPC with Julia
+
+### Center for Advanced Research Computing <br> University of Southern California <br>
+
+### Last updated on 2022-01-25
+
+---
+
+## Outline
+
+1. What is HPC?
+2. Design of Julia
+3. Profiling and benchmarking
+4. Efficient memory use
+5. Data I/O
+6. Parallel programming
+
+---
+
+## Job script example
+
+```bash
+#!/bin/bash
+
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8GB
+#SBATCH --time=1:00:00
+#SBATCH --account=<project_id>
+
+module purge
+module load gcc/11.2.0
+module load julia/1.7.0
+
+julia script.jl
+```
+
+---
+
+## Additional resources
+
+[Using Julia on CARC systems](https://www.carc.usc.edu/user-information/user-guides/software-and-programming/julia)  
+[Julia language](https://www.julialang.org)  
+[Julia documentation](https://docs.julialang.org/en/v1/)  
+[Julia cheat sheet](https://juliadocs.github.io/Julia-Cheat-Sheet/)  
+[Julia performance tips](https://docs.julialang.org/en/v1/manual/performance-tips/)  
+[JuliaHub](https://juliahub.com/ui/Home)  
+[JuliaParallel](https://github.com/JuliaParallel)  
+[JuliaGPU](https://juliagpu.org/)
+
+Tutorials:
+
+[Julia Learning](https://julialang.org/learning/)  
+[JuliaAcademy](https://juliaacademy.com/courses)
+
+Web books:
+
+[Think Julia: How to Think Like a Computer Scientist](https://benlauwens.github.io/ThinkJulia.jl/latest/book.html)
+
+---
+
+## CARC support
+
+- [Submit a support ticket](https://www.carc.usc.edu/user-information/ticket-submission)
+- [User Forum](https://hpc-discourse.usc.edu/)
+- Office Hours
+  - Every Tuesday 2:30-5pm
+  - Register [here](https://www.carc.usc.edu/news-and-events/events)
+
+    </textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create({
+        ratio: "16:10",
+        highlightStyle: "ascetic",
+      });
+    </script>
+  </body>
+</html>
