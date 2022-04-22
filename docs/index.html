@@ -15,52 +15,674 @@ class: left, top, title-slide
 
 ### Center for Advanced Research Computing <br> University of Southern California <br>
 
-### Last updated on 2022-01-25
+### Last updated on 2022-04-22
 
 ---
 
 ## Outline
 
 1. What is HPC?
-2. Design of Julia
+2. Julia's high-performance design
 3. Profiling and benchmarking
-4. Efficient memory use
-5. Data I/O
-6. Parallel programming
+4. Parallel programming
+  - Multi-threading
+  - Multi-processing and distributed computing
+  - GPU computing
 
 ---
 
-## Job script example
+## What is HPC?
+
+- High-performance computing
+  - Relative to laptop and desktop computers
+  - More processors (cluster of compute nodes)
+  - More memory (shared and distributed memory)
+  - High-capacity, fast-access disk storage
+  - High-speed, high-bandwidth networks
+- What HPC enables
+  - **Scaling** (to more compute resources)
+  - **Speedup** (faster run times)
+  - **High throughput** (running many jobs at the same time)
+  - **Long runs** (jobs that take days or weeks)
+
+---
+
+## Why use Julia on HPC systems?
+
+- Limitations of a laptop or workstation computer
+  - Space (data won't fit in memory)
+  - Time (takes too long to run)
+- A high-level, high-performance dynamic programming language for numerical computing
+  - Better performance, in general, than other dynamic languages (Python, R, Matlab, etc.)
+  - Easier to learn and use than static, compiled languages (C, C++, Fortran)
+
+---
+
+## How to use Julia on CARC systems
+
+- [Download](https://www.julialang.org/downloads/) latest stable release for Linux (x86, 64-bit, glibc)
+
+```bash
+wget -q https://julialang-s3.julialang.org/bin/linux/x64/1.7/julia-1.7.2-linux-x86_64.tar.gz
+tar -xf julia-1.7.2-linux-x86_64.tar.gz
+rm julia-1.7.2-linux-x86_64.tar.gz
+export PATH=$PWD/julia-1.7.2/bin:$PATH
+julia
+```
+
+- Add to `PATH` in `~/.bashrc`
+
+```bash
+export PATH=/path/to/julia-1.7.2/bin:$PATH
+```
+
+---
+
+## Julia's high-performance design
+
+- Designed to solve the two-language problem
+  1. Prototype in high-level, interpreted langauge (Python, R, Matlab, etc.)
+  2. Improve performance by re-writing in low-level, compiled language (C, C++, Fortran)
+- A dynamically typed language that runs fast
+  - "walks like Python, runs like C"
+  - Compiled, but feels like a scripting language
+  - Can be used interactively
+  - Productive for developing and running code
+- Two important design features
+  - Multiple dispatch
+  - Just-in-time (JIT) compiling (using [LLVM](https://www.llvm.org/))
+
+---
+
+## Other Julia features
+
+- Package manager and ecosystem
+  - Diverse ecosystem of packages
+  - Efficient and reproducible package environments
+  - Parallel pre-compilation of packages
+  - Pre-built binaries for external dependencies (e.g., FFTW, HDF5, MPI, etc.)
+- Metaprogramming
+- Asynchronous programming
+- Native logging, debugging, profiling, and benchmarking
+- Open source ([MIT](https://github.com/JuliaLang/julia/blob/master/LICENSE.md))
+
+---
+
+## Multiple dispatch
+
+- Ability to define generic functions that can be applied to many argument types
+- Type inference occurs at runtime; no explicit or restrictive typing needed
+- Julia will JIT compile different versions of the same function to efficient, specialized machine code based on different combinations of argument types
+- If type does not work with function actions, will get MethodError
+- Can restrict inputs using subtyping (abstract types)
+- Enables high degree of code reuse
+  - Ability to define new types that can be used with existing functions
+  - Ability to define new functions that apply to existing types
+
+---
+
+## Just-in-time (JIT) compiling
+
+- How Julia's JIT compiling works
+  1. Call function with specific argument inputs
+  2. Infers type information from function inputs (e.g., Int64)
+  3. Translates Julia code into LLVM intermediate representation (IR) code (using specific types)
+  4. Then LLVM compiles IR code into static program (efficient, specialized machine code)
+- Compiling incurs an initial startup cost (first function call)
+- Pre-compile when possible
+- Useful macros for compiler introspection
+  - Use `@code_warntype` to see inferred types and any issues
+  - Use `@code_llvm` to see LLVM IR code
+  - Use `@code_native` to see native assembly code
+
+---
+
+## An example of multiple dispatch
+
+```julia
+function cube(x)
+    x^3
+end
+
+@code_warntype cube(5)
+@code_warntype cube(5.5)
+@code_warntype cube("julia")
+
+@code_llvm cube(5)
+@code_llvm cube(5.5)
+@code_llvm cube("julia")
+
+@code_native cube(5)
+@code_native cube(5.5)
+@code_native cube("julia")
+```
+
+---
+
+## Types in Julia
+
+- Getting types right is critical for high-performance Julia code
+- Abstract and concrete types
+  - Any
+  - Number
+      - Real
+          - AbstractFloat
+             - Float64, Float32
+          - Integer
+             - Int64, Int32, Bool
+      - Complex
+  - AbstractChar
+      - Char
+  - AbstractString
+      - String
+         - SubString
+
+---
+
+## General recommendations to improve performance of Julia code
+
+- Code first, optimize later (if needed)
+- Profile code to identify bottlenecks
+- Use existing optimized solutions
+- Consult package and function documentation
+- Simplify when possible (do less)
+- [Julia performance tips](https://docs.julialang.org/en/v1/manual/performance-tips/)  
+  - Write generic functions (modular and testable)
+  - Keep types stable within function operations
+  - Access arrays in memory order (columns)
+  - Pre-allocate output objects
+  - "Fuse" vectorized operations
+
+---
+
+## Profiling and benchmarking
+
+- Aim for code that is *fast enough*
+- Programmer time is more expensive than compute time
+- Basic profiling workflow:
+
+1. Profile code to understand execution time and memory use
+2. Identify bottlenecks (i.e., parts of code that take the most time)
+3. Try to improve performance of bottlenecks by modifying code
+4. Benchmark alternative code to identify best alternative
+
+---
+
+## Profiling Julia code
+
+- `@profile` macro with `using Profile` (sampling/statistical profiler)
+- Packages for visualizing `@profile` output
+  - [FlameGraphs.jl](https://github.com/timholy/FlameGraphs.jl)
+  - [ProfileView.jl](https://github.com/timholy/ProfileView.jl)
+  - [ProfileSVG.jl](https://github.com/kimikage/ProfileSVG.jl)
+  - [ProfileVega.jl](https://github.com/davidanthoff/ProfileVega.jl)
+  - [StatProfilerHTML.jl](https://github.com/tkluck/StatProfilerHTML.jl)
+  - [PProf.jl](https://github.com/JuliaPerf/PProf.jl)
+- Can also use external profiling tools: perf, OProfile, or Intel VTune
+- Profiling output can be difficult to interpret
+- On CARC systems, use JupyterLab via CARC OnDemand to view graphics
+- Or download output files to view graphics locally
+
+---
+
+## Profiling example
+
+```julia
+using Profile, LinearAlgebra
+
+function test()
+    A = rand(2000, 2000)
+    B = inv(A)
+    svd(B)
+end
+
+Profile.clear()
+
+@profile test()
+
+Profile.print()
+```
+
+---
+
+## Benchmarking Julia code
+
+- `@time` or `@timev` macros for elapsed time and memory allocations
+- To measure memory allocation line-by-line, start Julia with the `--track-allocation=<setting>` option where setting can be one of none (default), user (everything except Julia's core code), or all (everything) (upon exit, results are written to .mem text files)
+- Alternatives to consider
+  - `@btime` or `@benchmark` macros from [BenchmarkTools.jl](https://github.com/JuliaCI/BenchmarkTools.jl)
+  - `@timeit` macro from [TimerOutputs.jl](https://github.com/KristofferC/TimerOutputs.jl)
+  - [BaseBenchmarks.jl](https://github.com/JuliaCI/BaseBenchmarks.jl) for benchmarking suites
+  - [PkgBenchmark.jl](https://github.com/JuliaCI/PkgBenchmark.jl) for tracking package performance
+
+---
+
+## Benchmarking example
+
+```julia
+using LinearAlgebra
+
+function test()
+    A = rand(2000, 2000)
+    B = inv(A)
+    svd(B)
+end
+
+@time test()
+
+@timev test()
+
+using BenchmarkTools
+
+@btime test()
+
+@benchmark test()
+```
+
+---
+
+## Parallel programming
+
+- Simultaneous execution of different parts of a larger computation
+- CPU bound vs. memory bound vs. I/O bound
+- Different kinds of parallel
+  - Data vs. task parallelism
+  - Tightly coupled (interdependent) vs. loosely coupled (independent) computations
+  - Multi-threading vs. multi-processing
+  - Shared memory vs. distributed memory
+  - CPU vs. GPU computing
+  - Implicit vs. explicit parallel programming
+- Using one (multicore) compute node is easier than using multiple nodes
+- **Scaling** computation to more processors (cores)
+- Focus on **speedup** (decrease in runtime)
+- [Official docs](https://docs.julialang.org/en/v1/manual/parallel-computing/)
+
+---
+
+## Costs of parallelizing
+
+- Some computations are not worth parallelizing
+- Some costs to parallelizing (overhead)
+  - Changing code
+  - Spawning child processes
+  - Copying data and environment
+  - Communications
+- Speedup not proportional to number of cores (Amdahl's law)
+- Optimal number of cores
+  - Depends on specific computations
+  - Experiment to find
+
+---
+
+## Implicit parallel programming
+
+- Parallel details are abstracted away from end user (low-effort parallelism)
+- Typically based on multi-threading, sometimes multi-processing
+- Just need to specify how many cores to use
+- Typically limited to one compute node (so maximize cores if needed)
+
+---
+
+## Implicit multi-threading
+
+- When using packages with threaded functions
+- End user simply sets number of threads to use
+  - `julia --threads 4`
+  - `export JULIA_NUM_THREADS=4`
+  - `Threads.nthreads()`
+
+---
+
+## DataFrames.jl example
+
+- Functions in [DataFrames.jl](https://github.com/JuliaData/DataFrames.jl) are multi-threaded
+- Just need to specify number of threads
+- Optimal number of threads may depend on specific function, data, etc.
+
+```julia
+julia data.jl
+```
+
+vs.
+
+```julia
+julia --threads 4 data.jl
+```
+
+---
+
+## Multi-threaded BLAS/LAPACK library
+
+- Basic Linear Algebra Subprograms/Linear Algebra Package
+- By default, Julia uses multi-threaded [OpenBLAS](https://github.com/JuliaBinaryWrappers/OpenBLAS_jll.jl)
+- Can also use multi-threaded [Intel MKL](https://github.com/JuliaLinearAlgebra/MKL.jl)
+- Both libraries have runtime CPU targeting
+
+---
+
+## Explicit parallelism
+
+- End user explicitly sets up parallelism
+- Different kinds of explicit parallelism
+- Either multi-threading, multi-processing, distributed, or GPU
+- Which kind to use depends on specific computations
+- Single node (shared memory) vs. multiple nodes (distributed memory)
+- Easier to set up with single (multicore) node
+
+---
+
+## Multi-threading
+
+- `@threads` macro from Base.Threads
+- Composable task parallelism using shared memory (similar to OpenMP)
+- Try to balance workload between threads (static vs. dynamic scheduling)
+- Need to avoid data races
+- Problems typically stem from thread interactions
+- Set number of threads to use
+  - `julia --threads 4`
+  - `export JULIA_NUM_THREADS=4`
+  - `Threads.nthreads()`
+- [Official docs](https://docs.julialang.org/en/v1/manual/multi-threading/)
+
+---
+
+## Multi-threading examples
+
+```julia
+using Base.Threads
+
+# For loop
+
+@threads for i = 1:16
+    println("From thread $(threadid()) // i = $i")
+end
+
+# Task spawning
+
+function fib(n::Int)
+    if n < 2
+        return n
+    end
+    t = @spawn fib(n - 2)
+    return fib(n - 1) + fetch(t)
+end
+
+@timev fib(5)
+@timev fib(32)
+```
+
+---
+
+## Multi-processing and distributed computing
+
+- Different methods available
+  - [Distributed]() library
+  - [MPI.jl](https://github.com/JuliaParallel/MPI.jl)
+  - [Dagger.jl](https://github.com/JuliaParallel/Dagger.jl)
+- [Official docs](https://docs.julialang.org/en/v1/manual/distributed-computing/)
+
+---
+
+## Distributed computing via Distributed
+
+- `using Distributed`
+- Manager process and worker processes
+- One-sided message passing that allows programs to run on multiple processes in separate memory domains at the same time
+- Remote references and calls
+- Try to minimize sending messages and moving data for best performance
+- Single node: `julia --procs 4`
+- Multiple nodes: `julia --machine-file nodes.txt`
+  - Uses passwordless `ssh` key login
+  - TCP/IP transport for communications
+  - By default, all workers are connected to each other
+- Can also use [ClusterManagers.jl](https://github.com/JuliaParallel/ClusterManagers.jl) to submit Slurm jobs from within Julia
+
+---
+
+## Distributed example on a single node
+
+```julia
+using Distributed
+
+@everywhere function test(n::Int)
+    A = rand(n, n)
+    B = inv(A)
+end
+
+proc2 = remotecall(test, 2, 5000)
+proc3 = remotecall(test, 3, 5000)
+proc4 = remotecall(test, 4, 5000)
+
+sum = @spawnat :any fetch(proc2) + fetch(proc3) + fetch(proc4)
+
+fetch(sum)
+```
+
+---
+
+## Parallel loops and map examples
+
+- For tiny operations, use `@distributed for`
+- For large operations, use `pmap`
+
+```julia
+using Distributed
+
+@everywhere function test(n::Int)
+    A = rand(n, n)
+    B = inv(A)
+end
+
+total = @distributed (+) for i = 1:16
+    test(5000)
+end
+
+@everywhere using LinearAlgebra
+
+@everywhere function test(x::Matrix)
+    A = inv(x)
+    B = svdvals(A)
+end
+
+M = Matrix{Float64}[rand(5000, 5000) for i = 1:4]
+
+pmap(test, M)
+```
+
+---
+
+## Distributed example on multiple nodes
+
+- Need machine file that lists hostnames (e.g., nodes.txt)
+
+```bash
+e05-42
+e05-76
+```
+
+- Then launch
+
+```bash
+julia --machine-file nodes.txt
+```
+
+- For Slurm jobs, machine file can be auto-generated
+
+```bash
+scontrol show hostnames $SLURM_NODELIST > nodes.txt
+
+julia --machine-file nodes.txt script.jl
+```
+
+---
+
+## Distributed computing via MPI.jl
+
+- [MPI.jl](https://github.com/JuliaParallel/MPI.jl) provides interface to an MPI implementation (OpenMPI, MPICH, MVAPICH2, Intel MPI)
+- By default, uses pre-built MPICH binary
+- Can improve performance by linking to CARC provided MPI module
+- Single program, multiple data (SPMD) model
+- Multiple processes running independent programs, communicate as necessary via messages
+
+---
+
+## Simple MPI example
+
+- Develop script
+
+```julia
+using MPI
+
+MPI.Init()
+
+comm = MPI.COMM_WORLD
+println("Hello world from rank $(MPI.Comm_rank(comm)) of $(MPI.Comm_size(comm))")
+MPI.Barrier(comm)
+
+MPI.Finalize()
+```
+
+- Then launch
+
+```bash
+srun --mpi=pmi2 -n $SLURM_NTASKS julia mpi.jl
+```
+
+---
+
+## MPI reduce example
+
+```julia
+using MPI
+
+MPI.Init()
+
+comm = MPI.COMM_WORLD
+root = 0
+
+function test(n::Int)
+    A = rand(n, n)
+    B = inv(A)
+end
+
+res = MPI.Reduce(test(5000), MPI.SUM, root, comm)
+
+if(MPI.Comm_rank(comm) == root)
+   println(size(res))
+end
+
+MPI.Finalize()
+```
+
+---
+
+## MPI job script example
 
 ```bash
 #!/bin/bash
 
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=8GB
-#SBATCH --time=1:00:00
 #SBATCH --account=<project_id>
+#SBATCH --partition=main
+#SBATCH --constraint=xeon-4116
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=24
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=0
+#SBATCH --time=1:00:00
 
 module purge
-module load gcc/11.2.0
-module load julia/1.7.0
 
-julia script.jl
+ulimit -s unlimited
+
+srun --mpi=pmi2 -n $SLURM_NTASKS julia mpi.jl
 ```
+
+---
+
+## GPU computing
+
+- A few options for programming interfaces
+  - [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl)
+  - [AMDGPU.jl](https://github.com/JuliaGPU/AMDGPU.jl)
+  - [oneAPI.jl](https://github.com/JuliaGPU/oneAPI.jl)
+  - [OpenCL.jl](https://github.com/JuliaGPU/OpenCL.jl)
+- Specific applications
+  - [Flux.jl](https://github.com/FluxML/Flux.jl) and [SciML](https://sciml.ai/) for machine learning
+  - [DiffEqGPU.jl](https://github.com/SciML/DiffEqGPU.jl) for differential equations
+
+---
+
+## Simple CUDA.jl example
+
+```julia
+using CUDA
+
+W = cu(rand(1000, 1000))
+b = cu(rand(1000))
+
+predict(x) = W*x .+ b
+loss(x, y) = sum((predict(x) .- y).^2)
+
+x, y = cu(rand(1000)), cu(rand(1000))
+loss(x, y)
+```
+
+---
+
+## GPU job script example
+
+```bash
+#!/bin/bash
+
+#SBATCH --account=<project_id>
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:v100:1
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=16GB
+#SBATCH --time=1:00:00
+
+module purge
+module load nvidia-hpc-sdk
+
+julia cuda.jl
+```
+
+---
+
+## Slurm job arrays
+
+- For submitting and managing collections of similar jobs quickly and easily
+- Some use cases
+  - Varying simulation or model parameters
+  - Running the same models on different datasets
+- Setting up a job array
+  - Add `#SBATCH --array=<index>` option to job script
+  - Each job task will use the same resource requests
+  - Modify job or Julia script to use the array index
+- [Slurm job array docs](https://slurm.schedmd.com/job_array.html)
+
+---
+
+## High-throughput computing
+
+- Lots of short-running jobs (< 15 minutes)
+  - Lots of serial jobs that could be run in parallel on different cores
+  - Lots of parallel jobs that could be run sequentially or in parallel
+- Submitting lots of jobs (> 1000) negatively impacts job scheduler
+- Pack short-running jobs into one job
+- Use a program like [Launcher](https://carc.usc.edu/user-information/user-guides/software-and-programming/launcher)
 
 ---
 
 ## Additional resources
 
-[Using Julia on CARC systems](https://www.carc.usc.edu/user-information/user-guides/software-and-programming/julia)  
 [Julia language](https://www.julialang.org)  
 [Julia documentation](https://docs.julialang.org/en/v1/)  
 [Julia cheat sheet](https://juliadocs.github.io/Julia-Cheat-Sheet/)  
 [Julia performance tips](https://docs.julialang.org/en/v1/manual/performance-tips/)  
 [JuliaHub](https://juliahub.com/ui/Home)  
-[JuliaParallel](https://github.com/JuliaParallel)  
-[JuliaGPU](https://juliagpu.org/)
 
 Tutorials:
 
@@ -69,12 +691,28 @@ Tutorials:
 
 Web books:
 
-[Think Julia: How to Think Like a Computer Scientist](https://benlauwens.github.io/ThinkJulia.jl/latest/book.html)
+[Think Julia: How to Think Like a Computer Scientist](https://benlauwens.github.io/ThinkJulia.jl/latest/book.html)  
+[Julia Data Science](https://juliadatascience.io/)
+
+---
+
+## Additional additional resources
+
+[JuliaParallel](https://github.com/JuliaParallel)  
+[JuliaGPU](https://juliagpu.org/)  
+[JuliaStats](https://juliastats.org/)  
+[Flux](https://fluxml.ai/)  
+[SciML](https://sciml.ai/)  
+[JuMP](https://jump.dev/)  
+[BioJulia](https://biojulia.net/)  
+[JuliaHealth](https://juliahealth.org/)  
+[JuliaGeo](https://juliageo.org/)
 
 ---
 
 ## CARC support
 
+- [Using Julia on CARC systems](https://www.carc.usc.edu/user-information/user-guides/software-and-programming/julia)
 - [Submit a support ticket](https://www.carc.usc.edu/user-information/ticket-submission)
 - [User Forum](https://hpc-discourse.usc.edu/)
 - Office Hours
