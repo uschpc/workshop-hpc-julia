@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#SBATCH --account=<project_id>
+#SBATCH --partition=main
+#SBATCH --constraint=xeon-4116
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=24
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=0
+#SBATCH --time=1:00:00
+
+module purge
+
+ulimit -s unlimited
+
+srun --mpi=pmi2 -n $SLURM_NTASKS julia mpi.jl
