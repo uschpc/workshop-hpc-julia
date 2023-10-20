@@ -17,7 +17,8 @@ Learning objectives:
 Example job scripts:
 
 - [serial.job](job-scripts/serial.job)
-- [multithreading.job](job-scripts/multithreading.job)
+- [threads.job](job-scripts/threads.job)
+- [distributed.job](job-scripts/distributed.job)
 - [mpi.job](job-scripts/mpi.job)
 - [gpu.job](job-scripts/gpu.job)
 - [array.job](job-scripts/array.job)
