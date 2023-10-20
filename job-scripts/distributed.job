@@ -11,9 +11,9 @@
 
 module purge
 module load julia/1.9.3
-module load gcc/11.3.0
-module load openmpi/4.1.4
 
 ulimit -s unlimited
 
-srun --mpi=pmix_v2 -n $SLURM_NTASKS julia mpi.jl
+scontrol show hostnames $SLURM_NODELIST > $TMPDIR/nodes.txt
+
+julia --machine-file $TMPDIR/nodes.txt distributed.jl

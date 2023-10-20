@@ -5,13 +5,11 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=16GB
+#SBATCH --mem=16G
 #SBATCH --time=1:00:00
 #SBATCH --array=1-5
 
 module purge
-module load julia/1.8.5
-
-printf "%s\n" "Task ID: $SLURM_ARRAY_TASK_ID"
+module load julia/1.9.3
 
 julia --threads $SLURM_CPUS_PER_TASK array.jl
