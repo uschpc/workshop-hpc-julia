@@ -13,11 +13,13 @@ class: left, top, title-slide
 
 # HPC with Julia
 
-### Derek Strong <br> dstrong[at]usc.edu <br>
+<img src="julia.svg" height="200" />
 
-### Center for Advanced Research Computing <br> University of Southern California <br>
+#### Derek Strong / dstrong[at]usc.edu
 
-### Last updated on 2023-02-17
+#### Center for Advanced Research Computing <br> University of Southern California <br>
+
+#### Last updated on 2023-10-20
 
 ---
 
@@ -27,7 +29,7 @@ class: left, top, title-slide
 2. Julia on CARC HPC clusters
 3. Julia's high-performance design
 4. Profiling and benchmarking
-5. Parallel programming
+5. Parallel computing
   - Multi-threading
   - Multi-processing and distributed computing
   - GPU computing
@@ -37,23 +39,27 @@ class: left, top, title-slide
 ## What is HPC?
 
 - High-performance computing
-  - Relative to laptop and desktop computers
-  - More processors (cluster of compute nodes)
-  - More memory (shared and distributed memory)
-  - High-capacity, fast-access disk storage
-  - High-speed, high-bandwidth networks
-- What HPC enables
-  - **Scaling** (to more compute resources)
-  - **Speedup** (faster run times)
-  - **Throughput** (running many jobs at the same time)
-  - **Duration** (running jobs for days or weeks)
+- Relative to laptop and desktop computers
+- More processors (cluster of compute nodes)
+- More memory (shared and distributed memory)
+- High-capacity, fast-access storage
+- High-speed, high-bandwidth networks
+
+---
+
+## What does HPC enable?
+
+- **Scaling** (using more compute resources)
+- **Speedup** (faster run times)
+- **Throughput** (running many jobs at the same time)
+- **Duration** (running jobs for days or weeks)
 
 ---
 
 ## Why use Julia on HPC clusters?
 
 - Limitations of a laptop or workstation computer
-  - Space (data does not fit in memory or on disk)
+  - Space (data does not fit in memory or storage)
   - Time (program takes too long to run)
 - A high-level, high-performance dynamic programming language for numerical computing
   - In general, faster than other dynamic languages (Python, R, Matlab, etc.)
@@ -61,17 +67,108 @@ class: left, top, title-slide
 
 ---
 
+## Simplified computing model
+
+```sh
+CPU <--> RAM <--> Storage
+```
+
+- A compute node (individual computer) has four main components
+  - Central Processing Unit (CPU with multiple cores/logical CPUs)
+  - Random Access Memory (RAM)
+  - Storage drives (direct-attached and/or network-attached storage)
+  - Buses (memory, I/O)
+- Some nodes may have Graphics Processing Units (GPUs) attached (via I/O bus)
+
+```sh
+Node <--> Node <--> Node <--> ...
+```
+
+- A computing cluster has multiple compute nodes networked together
+- Different types of networks are possible
+
+---
+
+## Compute node specs
+
+- HPC clusters may have a mix of different compute nodes
+  - Different types of CPUs (e.g., Intel vs. AMD)
+  - Varying numbers of **cores per node** (time)
+  - Varying amounts of **memory per node** (space)
+  - Different types of GPUs (e.g., A100 vs A40)
+  - Varying numbers of **GPUs per node** (time)
+  - Varying amounts of **memory per GPU** (space)
+- On CARC HPC clusters
+  - Use `nodeinfo` command to display cluster partition and node status
+  - 1 logical CPU = 1 core = 1 thread (`--cpus-per-task`)
+  - See more node details with: `module load gcc/11.3.0 hwloc && lstopo`
+- See Discovery cluster resources [here](https://www.carc.usc.edu/user-information/user-guides/hpc-basics/discovery-resources)
+
+---
+
+## CPU specs
+
+- Different CPU models have different capabilities and features
+  - Instruction set architectures (e.g., x86-64, ARM64, etc.)
+  - Microarchitecture designs (e.g., AMD Zen 3, Intel Cascade Lake, etc.)
+  - Vector extensions (e.g., AVX, AVX2, AVX-512, etc.)
+  - Clock speed (aka frequency)
+  - Local memory cache size
+- Simply running jobs on a better CPU will typically reduce run time
+- Use `lscpu` to display CPU specs on a node
+
+---
+
+## GPU specs
+
+- Different GPU models have different capabilities and features
+  - Architecture (Volta vs. Ampere)
+  - Clock speed (aka frequency)
+  - Amount of GPU memory
+  - GPU memory bandwidth
+  - Number of CUDA cores
+  - Number of tensor cores
+- Simply running jobs on a better GPU will typically reduce run time
+
+---
+
+## Computing constraints for jobs
+
+- Different types of constraints
+  - CPU cores = CPU-bound jobs
+  - Memory = Memory-bound jobs
+  - I/O speed = I/O-bound jobs
+  - Network speed = Network-bound jobs
+- In general, focus on the following
+  - Number of CPU cores
+  - CPU clock speed
+  - Amount of memory
+  - GPU model
+  - Number of GPUs
+  - Amount of GPU memory
+
+---
+
+## Reserving vs. using HPC resources
+
+- For Slurm jobs, reserving resources does not mean that the job actually uses them
+- Your Julia code has to make use of multiple cores and nodes
+  - There are different methods to do this (implicit vs. explicit parallelism)
+  - Requesting more cores and nodes does not necessarily lead to speedups
+  - There is an optimal number of cores depending on the computations
+
+---
+
 ## Julia on CARC HPC clusters
 
 - Julia is available via the software module system
 
-```bash
+```sh
 module purge
-module load julia/1.8.5
-julia
+module load julia/1.9.3
 ```
 
-- New stable versions are added as they are released
+- Modules for new stable versions are added as they are released
 - [CARC OnDemand](https://ondemand.carc.usc.edu/) interactive apps provide a graphical interface
   - JupyterLab
   - VS Code
@@ -81,15 +178,17 @@ julia
 
 ## Where to store Julia depot?
 
-- By default, the Julia depot (packages, artifacts, etc.) is stored in your home directory
-- On CARC HPC clusters, the /home1 file system is NFS
-- The /scratch1 or /project file systems are BeeGFS (parallel I/O)
-- For large parallel jobs, performance may be improved by moving depot to /scratch1 or /project
+- Julia depot = packages, artifacts, compiled cache, etc.
+- By default, the depot is stored in your home directory: `~/.julia`
+- The /home1 file system is NFS (no parallel I/O)
+- The /project and /scratch1 file systems are BeeGFS (parallel I/O)
+- For large parallel jobs, performance may be improved by moving depot to /project or /scratch1
 - Specify depot path by setting environment variable `JULIA_DEPOT_PATH`
-- Add to `~/.bashrc` to automatically set every time you log in
+- Make sure to use a unique path per Julia minor version
+- Add to `~/.bashrc` or `~/.zshrc` to automatically set every time you log in
 
-```bash
-export JULIA_DEPOT_PATH=/scratch1/ttrojan/julia/1.8
+```sh
+export JULIA_DEPOT_PATH=/scratch1/ttrojan/julia/1.9
 ```
 
 ---
@@ -212,7 +311,7 @@ end
 - Use existing optimized solutions
 - Consult package and function documentation
 - Simplify when possible (do less)
-- [Official Julia performance tips](https://docs.julialang.org/en/v1/manual/performance-tips/)  
+- [Official Julia performance tips](https://docs.julialang.org/en/v1/manual/performance-tips/)
   - Write generic functions (modular and testable)
   - Keep types stable within function operations
   - Access arrays in memory order (columns)
@@ -306,20 +405,19 @@ using BenchmarkTools
 
 ---
 
-## Parallel programming
+## Parallel computing
 
 - Simultaneous execution of different parts of a larger computation
-- CPU bound vs. memory bound vs. I/O bound
-- Different kinds of parallel
+- Different kinds of parallel computing
   - Data vs. task parallelism
   - Tightly coupled (interdependent) vs. loosely coupled (independent) computations
   - Multi-threading vs. multi-processing
   - Shared memory vs. distributed memory
   - CPU vs. GPU computing
-  - Implicit vs. explicit parallel programming
+- Implicit vs. explicit parallel programming
 - Using one (multicore) compute node is easier than using multiple nodes
 - **Scaling** computation to more processors (cores)
-- Focus on **speedup** (decrease in runtime)
+- Focus on **speedup** (decrease in run time)
 - [Official docs on parallel computing](https://docs.julialang.org/en/v1/manual/parallel-computing/)
 
 ---
@@ -339,16 +437,6 @@ using BenchmarkTools
 
 ---
 
-## Reserving vs. using HPC resources
-
-- For Slurm jobs, reserving resources does not mean that the job actually uses them
-- Your Julia code has to make use of multiple cores and nodes
-  - There are different methods to do this (implicit vs. explicit parallelism)
-  - Requesting more cores and nodes does not necessarily lead to speedups
-  - There is an optimal number of cores depending on the computations
-
----
-
 ## Implicit parallel programming
 
 - Parallel details are abstracted away from end user (low-effort parallelism)
@@ -364,6 +452,7 @@ using BenchmarkTools
 - End user simply sets number of threads to use
   - `julia --threads 4`
   - `export JULIA_NUM_THREADS=4`
+- Check number of threads in use
   - `Threads.nthreads()`
 
 ---
@@ -374,13 +463,13 @@ using BenchmarkTools
 - Just need to specify number of threads
 - Optimal number of threads may depend on specific function, data, etc.
 
-```bash
+```sh
 julia data.jl
 ```
 
 vs.
 
-```bash
+```sh
 julia --threads 4 data.jl
 ```
 
@@ -404,7 +493,7 @@ Sys.CPU_THREADS
 
 - Good idea to set number of threads
 
-```bash
+```sh
 export OPENBLAS_NUM_THREADS=$SLURM_CPUS_PER_TASK
 julia
 ```
@@ -440,6 +529,7 @@ BLAS.set_num_threads(8)
 - Set number of threads to use
   - `julia --threads 4`
   - `export JULIA_NUM_THREADS=4`
+- Check number of threads in use
   - `Threads.nthreads()`
 - [Official docs on multi-threading](https://docs.julialang.org/en/v1/manual/multi-threading/)
 - Also see [FLoops](https://github.com/JuliaFolds/FLoops.jl) for an alternative approach
@@ -475,16 +565,15 @@ end
 
 ## Thread pinning
 
-- Task affinity
-- May improve performace by pinning threads to cores
-- Compact vs. scattered pinning
 - [ThreadPinning.jl](https://github.com/carstenbauer/ThreadPinning.jl/)
+- May improve performace by pinning threads to cores (task affinity)
+- Compact vs. scattered pinning
 
 ---
 
 ## Multi-threading job script example
 
-```bash
+```sh
 #!/bin/bash
 
 #SBATCH --account=<project_id>
@@ -492,11 +581,11 @@ end
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=16GB
+#SBATCH --mem=16G
 #SBATCH --time=1:00:00
 
 module purge
-module load julia/1.8.5
+module load julia/1.9.3
 
 julia --threads $SLURM_CPUS_PER_TASK script.jl
 ```
@@ -528,13 +617,13 @@ julia --threads $SLURM_CPUS_PER_TASK script.jl
 
 - On a single node
 
-```bash
+```sh
 julia --procs 4
 ```
 
 - On multiple nodes
 
-```bash
+```sh
 julia --machine-file nodes.txt
 ```
 
@@ -603,20 +692,20 @@ pmap(test, M)
 
 - Need machine file that lists hostnames (e.g., nodes.txt)
 
-```bash
-e05-42
-e05-76
+```sh
+a01-02
+a01-03
 ```
 
 - Then launch
 
-```bash
+```sh
 julia --machine-file nodes.txt
 ```
 
 - For Slurm jobs, machine file can be auto-generated
 
-```bash
+```sh
 scontrol show hostnames $SLURM_NODELIST > $TMPDIR/nodes.txt
 
 julia --machine-file $TMPDIR/nodes.txt script.jl
@@ -626,7 +715,7 @@ julia --machine-file $TMPDIR/nodes.txt script.jl
 
 ## Distributed job script example
 
-```bash
+```sh
 #!/bin/bash
 
 #SBATCH --account=<project_id>
@@ -639,13 +728,13 @@ julia --machine-file $TMPDIR/nodes.txt script.jl
 #SBATCH --time=1:00:00
 
 module purge
-module load julia/1.8.5
+module load julia/1.9.3
 
 ulimit -s unlimited
 
 scontrol show hostnames $SLURM_NODELIST > $TMPDIR/nodes.txt
 
-julia --machine-file $TMPDIR/nodes.txt script.jl
+julia --machine-file $TMPDIR/nodes.txt distributed.jl
 ```
 
 ---
@@ -664,9 +753,9 @@ julia --machine-file $TMPDIR/nodes.txt script.jl
 
 1 - Load modules
 
-```bash
+```sh
 module purge
-module load julia/1.8.5
+module load julia/1.9.3
 module load gcc/11.3.0
 module load openmpi/4.1.4
 ```
@@ -705,7 +794,7 @@ MPI.Finalize()
 
 - Then launch with `srun`
 
-```bash
+```sh
 srun --mpi=pmix_v2 -n $SLURM_NTASKS julia mpi.jl
 ```
 
@@ -739,7 +828,7 @@ MPI.Finalize()
 
 ## MPI job script example
 
-```bash
+```sh
 #!/bin/bash
 
 #SBATCH --account=<project_id>
@@ -752,7 +841,7 @@ MPI.Finalize()
 #SBATCH --time=1:00:00
 
 module purge
-module load julia/1.8.5
+module load julia/1.9.3
 module load gcc/11.3.0
 module load openmpi/4.1.4
 
@@ -782,9 +871,9 @@ srun --mpi=pmix_v2 -n $SLURM_NTASKS julia mpi.jl
 
 1 - Log on to a GPU node and load module
 
-```bash
+```sh
 module purge
-module load julia/1.8.5
+module load julia/1.9.3
 ```
 
 2 - Then install
@@ -824,20 +913,20 @@ loss(x, y)
 
 ## GPU job script example
 
-```bash
+```sh
 #!/bin/bash
 
 #SBATCH --account=<project_id>
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:v100:1
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=16GB
+#SBATCH --gpus-per-task=a100:1
+#SBATCH --mem=16G
 #SBATCH --time=1:00:00
 
 module purge
-module load julia/1.8.5
+module load julia/1.9.3
 
 julia --threads $SLURM_CPUS_PER_TASK cuda.jl
 ```
@@ -858,9 +947,9 @@ julia --threads $SLURM_CPUS_PER_TASK cuda.jl
 
 ---
 
-## Slurm job array example script
+## Slurm job array script example
 
-```bash
+```sh
 #!/bin/bash
 
 #SBATCH --account=<project_id>
@@ -868,16 +957,31 @@ julia --threads $SLURM_CPUS_PER_TASK cuda.jl
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=16GB
+#SBATCH --mem=16G
 #SBATCH --time=1:00:00
 #SBATCH --array=1-5
 
 module purge
-module load julia/1.8.5
-
-printf "%s\n" "Task ID: $SLURM_ARRAY_TASK_ID"
+module load julia/1.9.3
 
 julia --threads $SLURM_CPUS_PER_TASK array.jl
+```
+
+---
+
+## Julia script example for Slurm job array
+
+```sh
+using CSV
+using DataFrames
+
+files = readdir("./data", join = true)
+task = parse(Int64, ENV["SLURM_ARRAY_TASK_ID"])
+file = files[task]
+
+data = CSV.read(file, DataFrame)
+
+describe(data)
 ```
 
 ---
@@ -920,7 +1024,6 @@ Web books:
 
 - [Using Julia on CARC HPC clusters](https://www.carc.usc.edu/user-information/user-guides/software-and-programming/julia)
 - [Submit a support ticket](https://www.carc.usc.edu/user-information/ticket-submission)
-- [User Forum](https://hpc-discourse.usc.edu/)
 - Office Hours
   - Every Tuesday 2:30-5pm
   - Get Zoom link [here](https://www.carc.usc.edu/education-and-resources/office-hours)
