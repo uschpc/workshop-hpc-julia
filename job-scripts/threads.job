@@ -9,6 +9,6 @@
 #SBATCH --time=1:00:00
 
 module purge
-module load julia/1.9.3
+module load julia/1.10.2
 
 julia --threads $SLURM_CPUS_PER_TASK script.jl
